@@ -58,6 +58,27 @@ async function startPairing(phoneNumber, options = {}) {
 
   socket.ev.on('creds.update', saveCreds);
 
+  // Group-only moderation and management commands.
+  const groupManager = require('./groupManager');
+  socket.ev.on('messages.upsert', async ({ messages, type }) => {
+    if (type !== 'notify' || !Array.isArray(messages)) return;
+    for (const message of messages) {
+      try {
+        await groupManager.handleGroupMessage(socket, message);
+      } catch (error) {
+        console.error('Group message handler error:', error.message);
+      }
+    }
+  });
+
+  socket.ev.on('group-participants.update', async (update) => {
+    try {
+      await groupManager.handleParticipantUpdate(socket, update);
+    } catch (error) {
+      console.error('Group welcome handler error:', error.message);
+    }
+  });
+
   socket.ev.on('connection.update', async (update) => {
     const { connection, lastDisconnect, qr } = update;
 
